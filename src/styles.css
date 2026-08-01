@@ -4,3 +4,41 @@
 
 .productShot{position:relative;min-width:0;margin:0;border:1px solid #cfd0ca;border-radius:14px;overflow:hidden;background:#fff;box-shadow:18px 22px 0 #dfe3ff}.productShot img{display:block;width:100%;height:auto;aspect-ratio:2/1;object-fit:cover;object-position:left top}.productShot figcaption{position:absolute;right:12px;bottom:12px;padding:7px 10px;border:1px solid #ffffff80;border-radius:6px;background:#10131bd9;color:#fff;font-size:11px;font-weight:800;backdrop-filter:blur(8px)}
 @media(max-width:680px){.productShot{box-shadow:9px 11px 0 #dfe3ff}.productShot img{aspect-ratio:16/10}.productShot figcaption{display:none}}
+/* Meta Pixel consent */
+.cookieConsent {
+  position: fixed;
+  z-index: 1000;
+  right: 20px;
+  bottom: 20px;
+  left: 20px;
+  display: flex;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 18px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  color: #eef3ff;
+  background: rgba(7, 11, 22, .97);
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .35);
+}
+.cookieConsent p { margin: 6px 0 0; color: #b7c0d8; font-size: 14px; line-height: 1.5; }
+.cookieConsent a { color: #fff; }
+.cookieActions { display: flex; flex-shrink: 0; gap: 10px; }
+.cookieActions button { padding: 11px 18px; }
+.cookieActions .secondary { color: #e8edff; background: transparent; border: 1px solid rgba(255,255,255,.28); }
+
+.successPage { min-height: 100vh; }
+.successWrap { max-width: 720px; margin: 0 auto; padding: 110px 24px 130px; text-align: center; }
+.successIcon { width: 76px; height: 76px; margin: 0 auto 24px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: #2563eb; font-size: 38px; font-weight: 800; }
+.successWrap h1 { margin: 14px 0 18px; font-size: clamp(38px, 6vw, 64px); }
+.successWrap > p { max-width: 620px; margin: 0 auto 30px; color: #667085; font-size: 18px; line-height: 1.7; }
+.successButton { display: inline-flex; padding: 15px 24px; border-radius: 12px; color: #fff; background: #2563eb; font-weight: 700; text-decoration: none; }
+.successWrap small { display: block; margin-top: 18px; color: #7b8499; }
+
+@media (max-width: 680px) {
+  .cookieConsent { align-items: stretch; flex-direction: column; gap: 14px; }
+  .cookieActions button { flex: 1; }
+}

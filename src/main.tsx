@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import productScreenshot from './assets/norov-local-ai-dashboard.png';
@@ -6,9 +6,11 @@ import productScreenshot from './assets/norov-local-ai-dashboard.png';
 declare global {
   interface Window {
     fbq?: (...args: any[]) => void;
+    _fbq?: (...args: any[]) => void;
   }
 }
 
+const META_PIXEL_ID = (import.meta.env.VITE_META_PIXEL_ID || '1533458127771797').trim();
 const STRIPE = (import.meta.env.VITE_STRIPE_CHECKOUT_URL || '').trim();
 const APP = (import.meta.env.VITE_APP_LOGIN_URL || '').trim();
 const SUPPORT_EMAIL = (import.meta.env.VITE_SUPPORT_EMAIL || '').trim();
@@ -95,6 +97,36 @@ const SocialLinks = ({ large = false }: { large?: boolean }) => (
   </div>
 );
 
+const META_CONSENT_KEY = 'norov_meta_consent';
+
+const loadMetaPixel = () => {
+  if (!META_PIXEL_ID || document.getElementById('meta-pixel-script')) return;
+
+  const fbq = ((...args: any[]) => {
+    if (fbq.callMethod) fbq.callMethod(...args);
+    else fbq.queue.push(args);
+  }) as ((...args: any[]) => void) & {
+    callMethod?: (...args: any[]) => void;
+    queue: any[];
+    loaded: boolean;
+    version: string;
+  };
+  fbq.queue = [];
+  fbq.loaded = true;
+  fbq.version = '2.0';
+  window.fbq = fbq;
+  window._fbq = fbq;
+
+  const script = document.createElement('script');
+  script.id = 'meta-pixel-script';
+  script.async = true;
+  script.src = 'https://connect.facebook.net/en_US/fbevents.js';
+  document.head.appendChild(script);
+
+  fbq('init', META_PIXEL_ID);
+  fbq('track', 'PageView');
+};
+
 const track = (event: string, data: Record<string, unknown> = {}) => {
   if (typeof window.fbq === 'function') window.fbq('track', event, data);
 };
@@ -104,7 +136,41 @@ const checkout = () => {
     return;
   }
   track('InitiateCheckout', { value: 19, currency: 'EUR', content_name: 'Norov Local AI 60 days' });
-  window.location.assign(STRIPE);
+  const checkoutUrl = new URL(STRIPE);
+  const hasMetaConsent = localStorage.getItem(META_CONSENT_KEY) === 'accepted';
+  checkoutUrl.searchParams.set('client_reference_id', hasMetaConsent ? 'meta_consent' : 'no_meta_consent');
+  window.location.assign(checkoutUrl.toString());
+};
+
+const CookieConsent = () => {
+  const [choice, setChoice] = useState<string | null>(() => localStorage.getItem(META_CONSENT_KEY));
+
+  useEffect(() => {
+    if (choice === 'accepted') loadMetaPixel();
+  }, [choice]);
+
+  if (choice) return null;
+
+  const decide = (value: 'accepted' | 'rejected') => {
+    localStorage.setItem(META_CONSENT_KEY, value);
+    setChoice(value);
+  };
+
+  return (
+    <aside className="cookieConsent" aria-label="Налаштування cookies">
+      <div>
+        <strong>Cookies для аналітики та реклами</strong>
+        <p>
+          Ми використовуємо Meta Pixel, щоб вимірювати ефективність реклами. Ви можете погодитися
+          або продовжити без маркетингових cookies. <a href="/privacy">Детальніше</a>
+        </p>
+      </div>
+      <div className="cookieActions">
+        <button className="secondary" onClick={() => decide('rejected')}>Відхилити</button>
+        <button onClick={() => decide('accepted')}>Прийняти</button>
+      </div>
+    </aside>
+  );
 };
 
 const benefits = [
@@ -204,6 +270,7 @@ const LegalPage = ({ title, children }: { title: string; children: React.ReactNo
       <div className="legalContent">{children}</div>
     </main>
     <LegalFooter />
+    <CookieConsent />
   </div>
 );
 
@@ -365,6 +432,38 @@ function Contacts() {
         </p>
       </div>
     </LegalPage>
+  );
+}
+
+function PaymentSuccess() {
+  return (
+    <div className="page successPage">
+      <header className="topbar">
+        <a className="brand" href="/">
+          <span className="mark">N</span>
+          <span>Norov Local AI</span>
+        </a>
+      </header>
+      <main className="successWrap">
+        <div className="successIcon" aria-hidden="true">✓</div>
+        <div className="eyebrow">Оплату завершено</div>
+        <h1>Дякуємо за покупку!</h1>
+        <p>
+          Платіж успішно прийнято. Перевірте email, указаний під час оплати: туди надійде
+          інформація для створення пароля та входу в Norov Local AI.
+        </p>
+        {APP ? (
+          <a className="successButton" href={APP} target="_blank" rel="noopener noreferrer">
+            Перейти до Norov Local AI
+          </a>
+        ) : (
+          <a className="successButton" href="/contacts">Зв’язатися з підтримкою</a>
+        )}
+        <small>Не бачите листа? Перевірте папку «Спам» або напишіть у підтримку.</small>
+      </main>
+      <LegalFooter />
+      <CookieConsent />
+    </div>
   );
 }
 
@@ -564,6 +663,7 @@ function App() {
         </section>
       </main>
       <LegalFooter />
+      <CookieConsent />
       <div className="mobile">
         <div>
           <del>€39</del>
@@ -586,6 +686,8 @@ const page =
     <Refunds />
   ) : path === '/contacts' ? (
     <Contacts />
+  ) : path === '/payment-success' ? (
+    <PaymentSuccess />
   ) : (
     <App />
   );

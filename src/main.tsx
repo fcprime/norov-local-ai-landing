@@ -130,18 +130,39 @@ const loadMetaPixel = () => {
 const track = (event: string, data: Record<string, unknown> = {}) => {
   if (typeof window.fbq === 'function') window.fbq('track', event, data);
 };
+
+const trackPurchase = () => {
+  if (localStorage.getItem(META_CONSENT_KEY) !== 'accepted') return;
+
+  loadMetaPixel();
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get('session_id');
+  const eventId = sessionId ? `stripe_${sessionId}` : `purchase_${crypto.randomUUID()}`;
+  const storageKey = `norov_purchase_sent_${eventId}`;
+
+  if (localStorage.getItem(storageKey)) return;
+
+  window.fbq?.(
+    'track',
+    'Purchase',
+    {
+      value: 19,
+      currency: 'EUR',
+      content_name: 'Norov Local AI — 60 days',
+    },
+    { eventID: eventId },
+  );
+  localStorage.setItem(storageKey, new Date().toISOString());
+};
 const checkout = () => {
   if (!STRIPE || !/^https:\/\/(buy|checkout)\.stripe\.com\//i.test(STRIPE)) {
     window.alert('Оплата тимчасово недоступна. Будь ласка, напишіть у підтримку.');
     return;
   }
-  track('InitiateCheckout', { value: 2, currency: 'EUR', content_name: 'Norov Local AI 60 days' });
+  track('InitiateCheckout', { value: 19, currency: 'EUR', content_name: 'Norov Local AI 60 days' });
   const checkoutUrl = new URL(STRIPE);
   const hasMetaConsent = localStorage.getItem(META_CONSENT_KEY) === 'accepted';
-  checkoutUrl.searchParams.set(
-    'client_reference_id',
-    hasMetaConsent ? 'meta_consent' : 'no_meta_consent',
-  );
+  checkoutUrl.searchParams.set('client_reference_id', hasMetaConsent ? 'meta_consent' : 'no_meta_consent');
   window.location.assign(checkoutUrl.toString());
 };
 
@@ -160,9 +181,7 @@ const CookieConsent = () => {
   };
 
   return (
-    <aside
-      className="cookieConsent"
-      aria-label="Налаштування cookies">
+    <aside className="cookieConsent" aria-label="Налаштування cookies">
       <div>
         <strong>Cookies для аналітики та реклами</strong>
         <p>
@@ -171,11 +190,7 @@ const CookieConsent = () => {
         </p>
       </div>
       <div className="cookieActions">
-        <button
-          className="secondary"
-          onClick={() => decide('rejected')}>
-          Відхилити
-        </button>
+        <button className="secondary" onClick={() => decide('rejected')}>Відхилити</button>
         <button onClick={() => decide('accepted')}>Прийняти</button>
       </div>
     </aside>
@@ -239,11 +254,7 @@ const LegalFooter = () => (
     <div className="seller">
       <strong>Norov Agency Serhii Norov</strong>
       <span>Підтримка користувачів</span>
-      {SUPPORT_EMAIL ? (
-        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
-      ) : (
-        <span>{supportLabel}</span>
-      )}
+      {SUPPORT_EMAIL ? <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> : <span>{supportLabel}</span>}
     </div>
     <nav>
       {APP && (
@@ -315,7 +326,8 @@ function Privacy() {
       <p>
         Користувач може попросити доступ до своїх даних, їх виправлення, видалення, обмеження
         обробки або подати заперечення. Для звернення напишіть на{' '}
-        {SUPPORT_EMAIL ? <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> : supportLabel}.
+        {SUPPORT_EMAIL ? <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> : supportLabel}
+        .
       </p>
     </LegalPage>
   );
@@ -364,8 +376,8 @@ function Refunds() {
       <h2>1. Запит на повернення</h2>
       <p>
         Запит можна подати на{' '}
-        {SUPPORT_EMAIL ? <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> : supportLabel},
-        указавши email покупки та причину звернення.
+        {SUPPORT_EMAIL ? <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> : supportLabel}
+        , указавши email покупки та причину звернення.
       </p>
       <h2>2. Цифровий доступ</h2>
       <p>
@@ -448,42 +460,32 @@ function Contacts() {
 }
 
 function PaymentSuccess() {
+  useEffect(() => {
+    trackPurchase();
+  }, []);
+
   return (
     <div className="page successPage">
       <header className="topbar">
-        <a
-          className="brand"
-          href="/">
+        <a className="brand" href="/">
           <span className="mark">N</span>
           <span>Norov Local AI</span>
         </a>
       </header>
       <main className="successWrap">
-        <div
-          className="successIcon"
-          aria-hidden="true">
-          ✓
-        </div>
+        <div className="successIcon" aria-hidden="true">✓</div>
         <div className="eyebrow">Оплату завершено</div>
         <h1>Дякуємо за покупку!</h1>
         <p>
-          Платіж успішно прийнято. Перевірте email, указаний під час оплати: туди надійде інформація
-          для створення пароля та входу в Norov Local AI.
+          Платіж успішно прийнято. Перевірте email, указаний під час оплати: туди надійде
+          інформація для створення пароля та входу в Norov Local AI.
         </p>
         {APP ? (
-          <a
-            className="successButton"
-            href={APP}
-            target="_blank"
-            rel="noopener noreferrer">
+          <a className="successButton" href={APP} target="_blank" rel="noopener noreferrer">
             Перейти до Norov Local AI
           </a>
         ) : (
-          <a
-            className="successButton"
-            href="/contacts">
-            Зв’язатися з підтримкою
-          </a>
+          <a className="successButton" href="/contacts">Зв’язатися з підтримкою</a>
         )}
         <small>Не бачите листа? Перевірте папку «Спам» або напишіть у підтримку.</small>
       </main>

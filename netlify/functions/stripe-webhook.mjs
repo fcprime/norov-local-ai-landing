@@ -55,7 +55,9 @@ export const handler = async (event) => {
     return json(500, { error: 'Missing customer identifier' });
   }
 
-  const eventId = `stripe_${session.payment_intent || session.id}`;
+  // The browser Purchase on /payment-success uses this same ID, allowing Meta
+  // to deduplicate browser and server events when both arrive.
+  const eventId = `stripe_${session.id}`;
   const amount = typeof session.amount_total === 'number' ? session.amount_total / 100 : 19;
   const currency = (session.currency || 'eur').toUpperCase();
   const payload = {
@@ -64,7 +66,7 @@ export const handler = async (event) => {
       event_time: Math.floor(Date.now() / 1000),
       event_id: eventId,
       action_source: 'website',
-      event_source_url: 'https://norov-local-ai.netlify.app/payment-success',
+      event_source_url: `https://norov-local-ai-landing.netlify.app/payment-success?session_id=${encodeURIComponent(session.id)}`,
       user_data: userData,
       custom_data: {
         currency,
